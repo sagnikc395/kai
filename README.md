@@ -13,7 +13,6 @@ building an small agent from scratch using tool calling.
 
 ## running it locally 
 
-- setup uv
-`https://docs.astral.sh/uv/getting-started/installation/`
+- setup [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - run it as
 `uv run main.py`
