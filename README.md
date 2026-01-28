@@ -15,4 +15,4 @@ building an small agent from scratch using tool calling.
 
 - setup uv
 - run it as
-`uv run kai.py`
+`uv run python kai.py`
