@@ -2,7 +2,7 @@
 
 building an small agent from scratch using tool calling.
 
-## Setup
+## setup and building
 
 - this model currently uses the free flash model from Google Gemini, feel free to swap with other models
 - steps to create and load your own API key:
@@ -11,8 +11,9 @@ building an small agent from scratch using tool calling.
   - copy the `.env.local` file into `.env`
   - paste the api key in GEMINI_API_KEY field
 
-## running
+## running it locally 
 
 - setup uv
+`https://docs.astral.sh/uv/getting-started/installation/`
 - run it as
 `uv run kai.py`

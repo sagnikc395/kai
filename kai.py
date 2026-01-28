@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from google import genai
 import click
-import sys
+
 from google.genai import types
 
 DEBUG = True
