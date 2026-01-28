@@ -8,6 +8,8 @@ from google.genai import types
 
 DEBUG = True
 
+from kai_tools.get_files_info import get_files_info
+
 
 def auth():
     load_dotenv()
@@ -52,4 +54,5 @@ def main(prompt: str | None, debug: bool, verbose: bool):
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    print(get_files_info("calculator"))
