@@ -10,3 +10,9 @@ building an small agent from scratch using tool calling.
   - copy the api key info
   - copy the `.env.local` file into `.env`
   - paste the api key in GEMINI_API_KEY field
+
+## running
+
+- setup uv
+- run it as
+`uv run kai.py`
