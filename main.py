@@ -8,7 +8,7 @@ from google.genai import types
 
 DEBUG = True
 
-from kai_tools.get_files_info import get_files_info
+from kai.get_files_info import get_files_info
 
 
 def auth():

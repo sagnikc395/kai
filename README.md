@@ -16,4 +16,4 @@ building an small agent from scratch using tool calling.
 - setup uv
 `https://docs.astral.sh/uv/getting-started/installation/`
 - run it as
-`uv run kai.py`
+`uv run main.py`
