@@ -17,7 +17,8 @@ def auth():
 @click.command()
 @click.argument("prompt", required=False)
 @click.option("--debug", is_flag=True, help="Print Debug Information (API KEY)")
-def main(prompt: str | None, debug: bool):
+@click.option("--verbose", is_flag=True, help="Print verbose execution details")
+def main(prompt: str | None, debug: bool, verbose: bool):
     if prompt is None:
         raise click.UsageError(
             'Missing PROMPT argumen.\n\nUsage:\n  agent "your prompt here"'
@@ -42,8 +43,12 @@ def main(prompt: str | None, debug: bool):
         raise click.ClickException("Response is malformed")
 
     click.echo(response.text)
-    click.echo(f"Prompt tokens : {response.usage_metadata.prompt_token_count}")
-    click.echo(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+    if verbose:
+        click.echo(f"User prompt: {prompt}\n")
+        click.echo(f"Prompt tokens : {response.usage_metadata.prompt_token_count}\n")
+        click.echo(
+            f"Response tokens: {response.usage_metadata.candidates_token_count}\n"
+        )
 
 
 if __name__ == "__main__":
