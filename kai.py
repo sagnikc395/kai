@@ -56,3 +56,4 @@ def main(prompt: str | None, debug: bool, verbose: bool):
 if __name__ == "__main__":
     # main()
     print(get_files_info("calculator"))
+    print(get_files_info("calculator", "pkg"))
