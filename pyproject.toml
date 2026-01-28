@@ -10,3 +10,6 @@ dependencies = [
     "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
