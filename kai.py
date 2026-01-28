@@ -2,41 +2,48 @@ import os
 
 from dotenv import load_dotenv
 from google import genai
+import click
 import sys
 from google.genai import types
+
+DEBUG = True
 
 
 def auth():
     load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    return api_key
+    return os.environ.get("GEMINI_API_KEY")
 
 
-def main():
+@click.command()
+@click.argument("prompt", required=False)
+@click.option("--debug", is_flag=True, help="Print Debug Information (API KEY)")
+def main(prompt: str | None, debug: bool):
+    if prompt is None:
+        raise click.UsageError(
+            'Missing PROMPT argumen.\n\nUsage:\n  agent "your prompt here"'
+        )
+
     api_key = auth()
     if api_key is None:
-        print("ERR: Please setup an api key before proceeding")
-        sys.exit(1)
-    print(f"API key: ${api_key}")
+        raise click.ClickException("Please set GEMINI_API_KEY in your environment.")
 
-    if len(sys.argv) < 2:
-        print("ERR: Need a prompt!")
-        sys.exit(1)
-    prompt = sys.argv[1]
+    if debug:
+        click.echo(f"[DEBUG] API Key: {api_key}")
+
     client = genai.Client(api_key=api_key)
 
-    
+    messages = [types.Content(role="user", parts=[types.Part(text=prompt)])]
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview", contents=prompt.strip()
+        model="gemini-3-flas-preview", contents=messages
     )
 
-    print(response.text)
     if response is None or response.usage_metadata is None:
-        print("ERR: Response is malformed")
-        sys.exit(1)
-    print(f"Prompt tokens : {response.usage_metadata.prompt_token_count}")  # type: ignore
-    print(f"Response tokens: {response.usage_metadata.candidates_token_count}")  # type: ignore
+        raise click.ClickException("Response is malformed")
+
+    click.echo(response.text)
+    click.echo(f"Prompt tokens : {response.usage_metadata.prompt_token_count}")
+    click.echo(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
 
 if __name__ == "__main__":
