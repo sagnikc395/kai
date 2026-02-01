@@ -1,5 +1,5 @@
 import os
-
+from kai.run_python_file import run_python_file
 from dotenv import load_dotenv
 from google import genai
 import click
@@ -51,6 +51,11 @@ def main(prompt: str | None, debug: bool, verbose: bool):
         )
 
 
+def exec_cmd():
+    working_dir = "examples/calculator"
+    print(run_python_file(working_dir, "main.py", ["3 + 5"]))
+
+
 if __name__ == "__main__":
-    # main()
     main()
+    # exec_cmd()
