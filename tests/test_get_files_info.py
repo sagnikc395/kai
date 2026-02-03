@@ -1,5 +1,9 @@
+from pathlib import Path
+
 import pytest
 from kai.get_files_info import get_files_info
+
+EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples" / "calculator"
 
 
 def index_by_name(results):
@@ -10,7 +14,7 @@ def index_by_name(results):
     "args,expected",
     [
         (
-            ("calculator",),
+            (str(EXAMPLES_DIR),),
             {
                 ".gitignore": False,
                 "tests.py": False,
@@ -19,7 +23,7 @@ def index_by_name(results):
             },
         ),
         (
-            ("calculator", "pkg"),
+            (str(EXAMPLES_DIR), "pkg"),
             {
                 "render.py": False,
                 "__pycache__": True,

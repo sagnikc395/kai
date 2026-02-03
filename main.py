@@ -21,7 +21,7 @@ def auth():
 def main(prompt: str | None, debug: bool, verbose: bool):
     if prompt is None:
         raise click.UsageError(
-            'Missing PROMPT argumen.\n\nUsage:\n  agent "your prompt here"'
+            'Missing PROMPT argument.\n\nUsage:\n  agent "your prompt here"'
         )
 
     api_key = auth()
@@ -36,7 +36,7 @@ def main(prompt: str | None, debug: bool, verbose: bool):
     messages = [types.Content(role="user", parts=[types.Part(text=prompt)])]
 
     response = client.models.generate_content(
-        model="gemini-3-flas-preview", contents=messages
+        model="gemini-3-flash-preview", contents=messages
     )
 
     if response is None or response.usage_metadata is None:
