@@ -1,4 +1,3 @@
-import os
 import pytest
 from kai.write_file import write_file
 

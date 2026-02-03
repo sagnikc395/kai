@@ -9,6 +9,7 @@ authors = [{ name = "Sagnik Chatterjee" }]
 dependencies = [
     "click>=8.3.1",
     "google-genai>=1.60.0",
+    "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
 ]
 
