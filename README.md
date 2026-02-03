@@ -1,18 +1,41 @@
 # kai
 
-building an small agent from scratch using tool calling.
+Building a small agent from scratch using tool calling, with a production-ready CLI.
 
-## setup and building
+## Setup
 
-- this model currently uses the free flash model from Google Gemini, feel free to swap with other models
-- steps to create and load your own API key:
-  - generate your API key from google genai studio
-  - copy the api key info
-  - copy the `.env.local` file into `.env`
-  - paste the api key in GEMINI_API_KEY field
+- This project uses the Gemini Flash model by default (override with `--model`).
+- Create your API key in Google GenAI Studio.
+- Copy `.env.local` to `.env` and set `GEMINI_API_KEY`.
 
-## running it locally 
+## Install (recommended)
 
-- setup [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- run it as
-`uv run main.py`
+```bash
+uv pip install -e .
+```
+
+## CLI usage
+
+```bash
+# chat with the model
+kai chat "summarize this repo"
+
+# list files (relative to working dir)
+kai --working-dir examples/calculator list-files .
+
+# read a file
+kai --working-dir examples/calculator read-file main.py
+
+# write a file
+kai --working-dir . write-file notes.txt --content "hello"
+
+# run a python file with args
+kai --working-dir examples/calculator run-python main.py --arg "3 + 5"
+```
+
+## Development
+
+```bash
+uv pip install -e .[dev]
+pytest -q
+```

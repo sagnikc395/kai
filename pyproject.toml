@@ -1,15 +1,22 @@
 [project]
 name = "kai"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight CLI agent with tool-calling utilities."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Sagnik Chatterjee" }]
 dependencies = [
     "click>=8.3.1",
     "google-genai>=1.60.0",
-    "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.0.2"]
+
+[project.scripts]
+kai = "kai.cli:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
