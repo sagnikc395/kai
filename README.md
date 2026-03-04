@@ -1,4 +1,4 @@
 ## kai
 
-An coding agent like Claude Code made from scratch.
+An coding assistant like Claude Code made from scratch.
 
