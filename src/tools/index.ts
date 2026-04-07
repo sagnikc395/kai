@@ -1,4 +1,4 @@
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 import type { Tool } from "./types.js";
 import type { ToolDefinition } from "../api/types.js";
 import { bashTool } from "./bash.js";
@@ -31,12 +31,10 @@ export function getAllTools(): Tool[] {
 
 export function getToolDefinitions(): ToolDefinition[] {
   return getAllTools().map((tool) => {
-    const jsonSchema = zodToJsonSchema(tool.inputSchema, {
-      target: "openApi3",
-      $refStrategy: "none",
+    const jsonSchema = z.toJSONSchema(tool.inputSchema, {
+      target: "draft-7",
     });
 
-    // Remove the wrapper properties that zodToJsonSchema adds
     const { $schema, ...parameters } = jsonSchema as Record<string, unknown>;
 
     return {
