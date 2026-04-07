@@ -15,4 +15,20 @@ export interface ToolCall {
   };
 }
 
+// tool definition interface
+export interface ToolDefinition {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
+}
+
+export interface ChatCompletionRequest {
+  model: string;
+  messages: ChatMessage[];
+  tools?: ToolDefinition[];
+  stream?: boolean;
+}
 
