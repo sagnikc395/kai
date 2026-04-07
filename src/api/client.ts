@@ -26,6 +26,8 @@ async function* parseSSEStream(
         yield data;
       }
     }
+  } catch (e) {
+    console.error(`MALFORMED JSON chunks !`);
   } finally {
     reader.releaseLock();
   }
