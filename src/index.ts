@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { App } from "./ui/App.js";
+import { App } from "./ui/App.tsx";
 import { render } from "ink";
 import React from "react";
 
@@ -35,3 +35,5 @@ export function startKai() {
 
   return program;
 }
+
+startKai().parse();
