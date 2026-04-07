@@ -1,0 +1,86 @@
+# .github/workflows/release.yml
+name: Release CLI
+
+on:
+  push:
+    tags:
+    - "v*.*.*" # triggers on v1.0.0, v2.3.1, etc.
+
+permissions:
+  contents: write # needed to create GitHub Releases
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+        - os: ubuntu-latest
+          target: bun-linux-x64
+          artifact: my-cli-linux-x64
+
+        - os: ubuntu-latest
+          target: bun-linux-arm64
+          artifact: my-cli-linux-arm64
+
+        - os: macos-latest
+          target: bun-darwin-x64
+          artifact: my-cli-macos-x64
+
+        - os: macos-latest
+          target: bun-darwin-arm64
+          artifact: my-cli-macos-arm64
+
+        - os: windows-latest
+          target: bun-windows-x64
+          artifact: my-cli-windows-x64.exe
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Build binary
+      run: |
+        bun build src/index.ts \
+          --compile \
+          --target=${{ matrix.target }} \
+          --outfile=dist/${{ matrix.artifact }}
+      shell: bash
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact }}
+        path: dist/${{ matrix.artifact }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: dist/
+        merge-multiple: true
+
+    - name: List artifacts
+      run: ls -lh dist/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*
+        generate_release_notes: true
+        # Optional: set to true to create a draft first
+        # draft: true
