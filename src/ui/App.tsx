@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 import { colors } from "../utils/colors.ts";
-import { REPL } from "./REPL.ts";
+import { REPL } from "./REPL.tsx";
 
 interface AppProps {
   apiKey: string;

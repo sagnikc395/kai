@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { App } from "./ui/App.tsx";
+import { App } from "./ui/App";
 import { render } from "ink";
 import React from "react";
 
