@@ -1,0 +1,69 @@
+version: "3"
+
+vars:
+  APP: kai
+  MAIN: ./cmd/kai
+  DIST: dist
+  GOCACHE_DIR: "{{.TASKFILE_DIR}}/.cache/go-build"
+
+env:
+  GOCACHE: "{{.GOCACHE_DIR}}"
+
+tasks:
+  default:
+    desc: Run the standard local checks
+    deps:
+      - check
+
+  run:
+    desc: Run kai from source; pass flags after --
+    cmds:
+      - go run {{.MAIN}} {{.CLI_ARGS}}
+
+  build:
+    desc: Build the kai binary for the current platform
+    cmds:
+      - mkdir -p {{.DIST}}
+      - go build -buildvcs=false -trimpath -o {{.DIST}}/{{.APP}} {{.MAIN}}
+
+  test:
+    desc: Run all Go tests
+    cmds:
+      - go test ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  fmt:
+    desc: Format Go source files
+    cmds:
+      - gofmt -w cmd internal
+
+  tidy:
+    desc: Tidy Go module files
+    cmds:
+      - go mod tidy
+
+  check:
+    desc: Format check, tests, and vet
+    cmds:
+      - test -z "$(gofmt -l cmd internal)"
+      - go test ./...
+      - go vet ./...
+
+  release:
+    desc: Build release binaries into dist/
+    cmds:
+      - mkdir -p {{.DIST}}
+      - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -ldflags="-s -w" -o {{.DIST}}/{{.APP}}-linux-amd64 {{.MAIN}}
+      - GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -ldflags="-s -w" -o {{.DIST}}/{{.APP}}-linux-arm64 {{.MAIN}}
+      - GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -ldflags="-s -w" -o {{.DIST}}/{{.APP}}-darwin-amd64 {{.MAIN}}
+      - GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -ldflags="-s -w" -o {{.DIST}}/{{.APP}}-darwin-arm64 {{.MAIN}}
+      - GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -buildvcs=false -trimpath -ldflags="-s -w" -o {{.DIST}}/{{.APP}}-windows-amd64.exe {{.MAIN}}
+
+  clean:
+    desc: Remove build artifacts and local Go build cache
+    cmds:
+      - rm -rf {{.DIST}} .cache/go-build
