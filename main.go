@@ -12,7 +12,7 @@ import (
 
 const (
 	defaultModel = "anthropic/claude-sonnet-4"
-	version      = "1.0.0"
+	version      = "2.0.0"
 )
 
 func main() {
