@@ -1,29 +1,28 @@
 # kai
 
-A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent — a tiny Claude Code-style tool — that runs an LLM in a tool-use loop against your local filesystem and shell, with an Ink-based REPL UI.
+A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent - a tiny Claude Code-style tool - that runs an LLM in a tool-use loop against your local filesystem and shell.
 
 ## Features
 
-- Interactive terminal UI built with [Ink](https://github.com/vadimdemedes/ink) + React
+- Interactive terminal REPL
 - Talks to any model available through [OpenRouter](https://openrouter.ai) (defaults to `anthropic/claude-sonnet-4`)
 - Tool-use agent loop with a small but practical tool set:
-  - `bash` — run shell commands
-  - `read` — read files
-  - `write` — create/overwrite files
-  - `edit` — string-replace edits
-  - `glob` — find files by pattern
-  - `grep` — search file contents
-- Single-binary builds for Linux, macOS, and Windows via `bun build --compile`
+  - `bash` - run shell commands
+  - `read` - read files
+  - `write` - create/overwrite files
+  - `edit` - string-replace edits
+  - `glob` - find files by pattern
+  - `grep` - search file contents
+- Single-binary builds for Linux, macOS, and Windows via `go build`
 
 ## Requirements
 
-- [Bun](https://bun.sh) (runtime + bundler)
+- Go 1.26.3 or newer
 - An OpenRouter API key
 
 ## Setup
 
 ```bash
-bun install
 export OPENROUTER_API_KEY=your_key_here
 ```
 
@@ -32,40 +31,37 @@ export OPENROUTER_API_KEY=your_key_here
 Run from source:
 
 ```bash
-bun run start
+go run .
 # or pick a different model
-bun run src/index.ts --model anthropic/claude-opus-4
+go run . --model anthropic/claude-opus-4
 ```
 
 CLI options:
 
-- `-m, --model <model>` — OpenRouter model id (default: `anthropic/claude-sonnet-4`)
-- `-V, --version` — print version
-- `-h, --help` — show help
+- `-m, --model <model>` - OpenRouter model id (default: `anthropic/claude-sonnet-4`)
+- `-V, --version` - print version
+- `-h, --help` - show help
 
 ## Building a binary
 
 ```bash
-bun run build         # local build into ./dist
-bun run build:all     # cross-compile for linux/macos/windows (x64 + arm64)
+go build -o dist/kai .
 ```
 
-The compiled binary is self-contained — drop it on your `PATH` and run `kai`.
+The compiled binary is self-contained. Drop it on your `PATH` and run `kai`.
 
 ## Project layout
 
 ```
-src/
-  index.ts          # CLI entry (commander)
+main.go             # CLI entry
+internal/
   api/              # OpenRouter client + types
   core/             # message loop, query, system prompt, tool executor
   tools/            # bash, read, write, edit, glob, grep
-  ui/               # Ink App + REPL + components
-  utils/
-build.ts            # bun --compile cross-target builds
+  ui/               # terminal REPL
 ```
 
-The agent loop lives in `src/core/message_loop.ts` and dispatches tool calls through `src/core/tool_executor.ts`. Tools are defined with [zod](https://zod.dev) schemas in `src/tools/` and exposed to the model via `zod-to-json-schema`.
+The agent loop lives in `internal/core/message_loop.go` and dispatches tool calls through `internal/core/tool_executor.go`. Tools expose JSON schemas from `internal/tools/registry.go`.
 
 ## License
 

@@ -61,11 +61,11 @@ type Delta struct {
 }
 
 type ChatCompletionChunk struct {
-	ID      string                        `json:"id"`
-	Object  string                        `json:"object"`
-	Created int64                         `json:"created"`
-	Model   string                        `json:"model"`
-	Choices []ChatCompletionChunkChoice   `json:"choices"`
+	ID      string                      `json:"id"`
+	Object  string                      `json:"object"`
+	Created int64                       `json:"created"`
+	Model   string                      `json:"model"`
+	Choices []ChatCompletionChunkChoice `json:"choices"`
 }
 
 func StringPtr(value string) *string {

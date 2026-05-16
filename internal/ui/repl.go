@@ -51,15 +51,15 @@ func RunREPL(ctx context.Context, client *api.OpenRouterClient, model string, in
 			},
 			OnToolResult: func(results []core.ToolExecutionResult) {
 				for _, result := range results {
-					fmt.Fprintf(output, "  %s %s\n", mutedLine("┌"), result.CallSummary)
+					fmt.Fprintf(output, "  %s %s\n", mutedLine("+"), result.CallSummary)
 					for _, line := range strings.Split(result.ResultSummary, "\n") {
-						fmt.Fprintf(output, "  %s %s\n", mutedLine("│"), line)
+						fmt.Fprintf(output, "  %s %s\n", mutedLine("|"), line)
 					}
 					status := success("done")
 					if result.Result.IsError {
 						status = failure("error")
 					}
-					fmt.Fprintf(output, "  %s %s\n", mutedLine("└"), status)
+					fmt.Fprintf(output, "  %s %s\n", mutedLine("+"), status)
 				}
 			},
 			OnComplete: func(text string) {

@@ -4,54 +4,59 @@ name: Release CLI
 on:
   push:
     tags:
-    - "v*.*.*" # triggers on v1.0.0, v2.3.1, etc.
+      - "v*.*.*" # triggers on v1.0.0, v2.3.1, etc.
 
 permissions:
   contents: write # needed to create GitHub Releases
 
 jobs:
   build:
-    name: Build (${{ matrix.target }})
+    name: Build (${{ matrix.goos }}-${{ matrix.goarch }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
         - os: ubuntu-latest
-          target: bun-linux-x64
-          artifact: my-cli-linux-x64
+          goos: linux
+          goarch: amd64
+          artifact: kai-linux-amd64
 
         - os: ubuntu-latest
-          target: bun-linux-arm64
-          artifact: my-cli-linux-arm64
+          goos: linux
+          goarch: arm64
+          artifact: kai-linux-arm64
 
         - os: macos-latest
-          target: bun-darwin-x64
-          artifact: my-cli-macos-x64
+          goos: darwin
+          goarch: amd64
+          artifact: kai-darwin-amd64
 
         - os: macos-latest
-          target: bun-darwin-arm64
-          artifact: my-cli-macos-arm64
+          goos: darwin
+          goarch: arm64
+          artifact: kai-darwin-arm64
 
         - os: windows-latest
-          target: bun-windows-x64
-          artifact: my-cli-windows-x64.exe
+          goos: windows
+          goarch: amd64
+          artifact: kai-windows-amd64.exe
 
     steps:
     - uses: actions/checkout@v4
 
-    - uses: oven-sh/setup-bun@v2
+    - uses: actions/setup-go@v5
       with:
-        bun-version: latest
+        go-version-file: go.mod
 
-    - name: Install dependencies
-      run: bun install
+    - name: Create dist directory
+      run: mkdir -p dist
+      shell: bash
 
     - name: Build binary
-      run: |
-        bun build src/index.ts \
-          --compile \
-          --target=${{ matrix.target }} \
-          --outfile=dist/${{ matrix.artifact }}
+      run: go build -trimpath -ldflags="-s -w" -o dist/${{ matrix.artifact }} .
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
       shell: bash
 
     - name: Upload artifact

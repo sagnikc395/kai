@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sagnikc395/kai/internal/api"
 	"github.com/sagnikc395/kai/internal/tools"
@@ -153,11 +152,4 @@ func nullableContent(text string) *string {
 		return nil
 	}
 	return api.StringPtr(text)
-}
-
-func formatLoopError(err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("%w", err)
 }
