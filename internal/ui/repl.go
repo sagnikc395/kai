@@ -7,11 +7,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/sagnikc395/kai/internal/api"
+	groq "github.com/conneroisu/groq-go"
+	groqtools "github.com/conneroisu/groq-go/pkg/tools"
 	"github.com/sagnikc395/kai/internal/core"
 )
 
-func RunREPL(ctx context.Context, client *api.OpenRouterClient, model string, input io.Reader, output io.Writer) error {
+func RunREPL(ctx context.Context, client *groq.Client, model groq.ChatModel, input io.Reader, output io.Writer) error {
 	conversation := core.NewConversation(client, model)
 	reader := bufio.NewReader(input)
 
@@ -42,7 +43,7 @@ func RunREPL(ctx context.Context, client *api.OpenRouterClient, model string, in
 			OnToken: func(token string) {
 				fmt.Fprint(output, token)
 			},
-			OnToolStart: func(toolCalls []api.ToolCall) {
+			OnToolStart: func(toolCalls []groqtools.ToolCall) {
 				if !strings.HasSuffix(message, "\n") {
 					fmt.Fprintln(output)
 				}

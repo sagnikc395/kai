@@ -2,14 +2,16 @@ package core
 
 import (
 	"context"
+	"io"
 
-	"github.com/sagnikc395/kai/internal/api"
+	groq "github.com/conneroisu/groq-go"
+	groqtools "github.com/conneroisu/groq-go/pkg/tools"
 	"github.com/sagnikc395/kai/internal/tools"
 )
 
 type MessageLoopCallbacks struct {
 	OnToken      func(token string)
-	OnToolStart  func(toolCalls []api.ToolCall)
+	OnToolStart  func(toolCalls []groqtools.ToolCall)
 	OnToolResult func(results []ToolExecutionResult)
 	OnComplete   func(text string)
 	OnError      func(err error)
@@ -21,10 +23,10 @@ type toolCallAccumulator struct {
 	arguments string
 }
 
-func RunMessageLoop(ctx context.Context, client *api.OpenRouterClient, messages []api.ChatMessage, model string, callbacks MessageLoopCallbacks) []api.ChatMessage {
-	systemMessage := api.ChatMessage{
-		Role:    "system",
-		Content: api.StringPtr(BuildSystemPrompt()),
+func RunMessageLoop(ctx context.Context, client *groq.Client, messages []groq.ChatCompletionMessage, model groq.ChatModel, callbacks MessageLoopCallbacks) []groq.ChatCompletionMessage {
+	systemMessage := groq.ChatCompletionMessage{
+		Role:    groq.RoleSystem,
+		Content: BuildSystemPrompt(),
 	}
 
 	toolDefinitions := tools.Definitions()
@@ -32,40 +34,18 @@ func RunMessageLoop(ctx context.Context, client *api.OpenRouterClient, messages 
 
 	for continueLoop {
 		assistantText := ""
-		toolCallDeltas := map[int]*toolCallAccumulator{}
-		finishReason := ""
+		accumulated := map[int]*toolCallAccumulator{}
+		finishReason := groq.FinishReason("")
 
-		requestMessages := make([]api.ChatMessage, 0, len(messages)+1)
+		requestMessages := make([]groq.ChatCompletionMessage, 0, len(messages)+1)
 		requestMessages = append(requestMessages, systemMessage)
 		requestMessages = append(requestMessages, messages...)
 
-		err := client.StreamChatCompletion(ctx, api.ChatCompletionRequest{
+		stream, err := client.ChatCompletionStream(ctx, groq.ChatCompletionRequest{
 			Model:    model,
 			Messages: requestMessages,
 			Tools:    toolDefinitions,
-		}, func(chunk api.ChatCompletionChunk) error {
-			if len(chunk.Choices) == 0 {
-				return nil
-			}
-
-			choice := chunk.Choices[0]
-			if choice.Delta.Content != nil && *choice.Delta.Content != "" {
-				assistantText += *choice.Delta.Content
-				if callbacks.OnToken != nil {
-					callbacks.OnToken(*choice.Delta.Content)
-				}
-			}
-
-			for _, delta := range choice.Delta.ToolCalls {
-				accumulateToolCallDelta(toolCallDeltas, delta)
-			}
-
-			if choice.FinishReason != "" {
-				finishReason = choice.FinishReason
-			}
-			return nil
 		})
-
 		if err != nil {
 			if callbacks.OnError != nil {
 				callbacks.OnError(err)
@@ -73,11 +53,47 @@ func RunMessageLoop(ctx context.Context, client *api.OpenRouterClient, messages 
 			return messages
 		}
 
-		toolCalls := buildToolCalls(toolCallDeltas)
-		if finishReason == "tool_calls" || (len(toolCalls) > 0 && finishReason != "stop") {
-			messages = append(messages, api.ChatMessage{
-				Role:      "assistant",
-				Content:   nullableContent(assistantText),
+		for {
+			chunk, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				stream.Close()
+				if callbacks.OnError != nil {
+					callbacks.OnError(err)
+				}
+				return messages
+			}
+			if chunk == nil || len(chunk.Choices) == 0 {
+				continue
+			}
+
+			choice := chunk.Choices[0]
+			if choice.Delta.Content != "" {
+				assistantText += choice.Delta.Content
+				if callbacks.OnToken != nil {
+					callbacks.OnToken(choice.Delta.Content)
+				}
+			}
+
+			for _, delta := range choice.Delta.ToolCalls {
+				if delta.Index != nil {
+					accumulateToolCallDelta(accumulated, delta)
+				}
+			}
+
+			if choice.FinishReason != "" {
+				finishReason = choice.FinishReason
+			}
+		}
+		stream.Close()
+
+		toolCalls := buildToolCalls(accumulated)
+		if finishReason == groq.ReasonToolCalls || (len(toolCalls) > 0 && finishReason != groq.ReasonStop) {
+			messages = append(messages, groq.ChatCompletionMessage{
+				Role:      groq.RoleAssistant,
+				Content:   assistantText,
 				ToolCalls: toolCalls,
 			})
 
@@ -95,9 +111,9 @@ func RunMessageLoop(ctx context.Context, client *api.OpenRouterClient, messages 
 		}
 
 		if assistantText != "" {
-			messages = append(messages, api.ChatMessage{
-				Role:    "assistant",
-				Content: api.StringPtr(assistantText),
+			messages = append(messages, groq.ChatCompletionMessage{
+				Role:    groq.RoleAssistant,
+				Content: assistantText,
 			})
 		}
 		if callbacks.OnComplete != nil {
@@ -109,47 +125,39 @@ func RunMessageLoop(ctx context.Context, client *api.OpenRouterClient, messages 
 	return messages
 }
 
-func accumulateToolCallDelta(accumulator map[int]*toolCallAccumulator, delta api.ToolCallDelta) {
-	existing, ok := accumulator[delta.Index]
+func accumulateToolCallDelta(acc map[int]*toolCallAccumulator, delta groqtools.ToolCall) {
+	idx := *delta.Index
+	existing, ok := acc[idx]
 	if !ok {
 		existing = &toolCallAccumulator{}
-		accumulator[delta.Index] = existing
+		acc[idx] = existing
 	}
 	if delta.ID != "" {
 		existing.id = delta.ID
 	}
-	if delta.Function != nil {
-		if delta.Function.Name != "" {
-			existing.name = delta.Function.Name
-		}
-		if delta.Function.Arguments != "" {
-			existing.arguments += delta.Function.Arguments
-		}
+	if delta.Function.Name != "" {
+		existing.name = delta.Function.Name
+	}
+	if delta.Function.Arguments != "" {
+		existing.arguments += delta.Function.Arguments
 	}
 }
 
-func buildToolCalls(accumulator map[int]*toolCallAccumulator) []api.ToolCall {
-	toolCalls := make([]api.ToolCall, 0, len(accumulator))
-	for index := 0; index < len(accumulator); index++ {
-		accumulated, ok := accumulator[index]
+func buildToolCalls(acc map[int]*toolCallAccumulator) []groqtools.ToolCall {
+	toolCalls := make([]groqtools.ToolCall, 0, len(acc))
+	for index := 0; index < len(acc); index++ {
+		a, ok := acc[index]
 		if !ok {
 			continue
 		}
-		toolCalls = append(toolCalls, api.ToolCall{
-			ID:   accumulated.id,
-			Type: "function",
-			Function: api.FunctionCall{
-				Name:      accumulated.name,
-				Arguments: accumulated.arguments,
+		toolCalls = append(toolCalls, groqtools.ToolCall{
+			ID:   a.id,
+			Type: string(groqtools.ToolTypeFunction),
+			Function: groqtools.FunctionCall{
+				Name:      a.name,
+				Arguments: a.arguments,
 			},
 		})
 	}
 	return toolCalls
-}
-
-func nullableContent(text string) *string {
-	if text == "" {
-		return nil
-	}
-	return api.StringPtr(text)
 }

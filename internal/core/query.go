@@ -3,16 +3,16 @@ package core
 import (
 	"context"
 
-	"github.com/sagnikc395/kai/internal/api"
+	groq "github.com/conneroisu/groq-go"
 )
 
 type Conversation struct {
-	messages []api.ChatMessage
-	client   *api.OpenRouterClient
-	model    string
+	messages []groq.ChatCompletionMessage
+	client   *groq.Client
+	model    groq.ChatModel
 }
 
-func NewConversation(client *api.OpenRouterClient, model string) *Conversation {
+func NewConversation(client *groq.Client, model groq.ChatModel) *Conversation {
 	return &Conversation{
 		client: client,
 		model:  model,
@@ -20,15 +20,15 @@ func NewConversation(client *api.OpenRouterClient, model string) *Conversation {
 }
 
 func (c *Conversation) Send(ctx context.Context, userMessage string, callbacks MessageLoopCallbacks) {
-	c.messages = append(c.messages, api.ChatMessage{
-		Role:    "user",
-		Content: api.StringPtr(userMessage),
+	c.messages = append(c.messages, groq.ChatCompletionMessage{
+		Role:    groq.RoleUser,
+		Content: userMessage,
 	})
 	c.messages = RunMessageLoop(ctx, c.client, c.messages, c.model, callbacks)
 }
 
-func (c *Conversation) Messages() []api.ChatMessage {
-	messages := make([]api.ChatMessage, len(c.messages))
+func (c *Conversation) Messages() []groq.ChatCompletionMessage {
+	messages := make([]groq.ChatCompletionMessage, len(c.messages))
 	copy(messages, c.messages)
 	return messages
 }

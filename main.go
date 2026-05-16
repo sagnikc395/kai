@@ -4,24 +4,30 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/sagnikc395/kai/internal/api"
+	groq "github.com/conneroisu/groq-go"
+	"github.com/joho/godotenv"
 	"github.com/sagnikc395/kai/internal/ui"
 )
 
-const (
-	defaultModel = "anthropic/claude-sonnet-4"
-	version      = "2.0.0"
-)
+const version = "2.0.0"
+
+var defaultModel = groq.ModelLlama3370BVersatile
 
 func main() {
-	model := defaultModel
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	modelStr := string(defaultModel)
 	showVersion := false
 
 	flags := flag.NewFlagSet("kai", flag.ExitOnError)
-	flags.StringVar(&model, "m", defaultModel, "model to use via OpenRouter")
-	flags.StringVar(&model, "model", defaultModel, "model to use via OpenRouter")
+	flags.StringVar(&modelStr, "m", modelStr, "model to use via Groq")
+	flags.StringVar(&modelStr, "model", modelStr, "model to use via Groq")
 	flags.BoolVar(&showVersion, "V", false, "print version")
 	flags.BoolVar(&showVersion, "version", false, "print version")
 	flags.Usage = func() {
@@ -40,15 +46,19 @@ func main() {
 		return
 	}
 
-	apiKey := os.Getenv("OPENROUTER_API_KEY")
+	apiKey := os.Getenv("GROQ_API_KEY")
 	if apiKey == "" {
-		fmt.Fprintln(os.Stderr, "ERROR: OPENROUTER_API_KEY environment variable is required.")
-		fmt.Fprintln(os.Stderr, "Set it with: export OPENROUTER_API_KEY=your_key_here")
+		fmt.Fprintln(os.Stderr, "ERROR: GROQ_API_KEY environment variable is required.")
 		os.Exit(1)
 	}
 
-	client := api.NewOpenRouterClient(apiKey)
-	if err := ui.RunREPL(context.Background(), client, model, os.Stdin, os.Stdout); err != nil {
+	client, err := groq.NewClient(apiKey)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := ui.RunREPL(context.Background(), client, groq.ChatModel(modelStr), os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
 	}

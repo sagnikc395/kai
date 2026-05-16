@@ -1,6 +1,10 @@
 package tools
 
-import "github.com/sagnikc395/kai/internal/api"
+import (
+	"encoding/json"
+
+	groqtools "github.com/conneroisu/groq-go/pkg/tools"
+)
 
 var registry = map[string]Tool{}
 
@@ -33,17 +37,24 @@ func All() []Tool {
 	}
 }
 
-func Definitions() []api.ToolDefinition {
-	definitions := make([]api.ToolDefinition, 0, len(All()))
+func Definitions() []groqtools.Tool {
+	defs := make([]groqtools.Tool, 0, len(All()))
 	for _, tool := range All() {
-		definitions = append(definitions, api.ToolDefinition{
-			Type: "function",
-			Function: api.ToolDefinitionFunction{
+		defs = append(defs, groqtools.Tool{
+			Type: groqtools.ToolTypeFunction,
+			Function: groqtools.FunctionDefinition{
 				Name:        tool.Name(),
 				Description: tool.Description(),
-				Parameters:  tool.Parameters(),
+				Parameters:  schemaToParams(tool.Parameters()),
 			},
 		})
 	}
-	return definitions
+	return defs
+}
+
+func schemaToParams(schema map[string]any) groqtools.FunctionParameters {
+	data, _ := json.Marshal(schema)
+	var params groqtools.FunctionParameters
+	_ = json.Unmarshal(data, &params)
+	return params
 }

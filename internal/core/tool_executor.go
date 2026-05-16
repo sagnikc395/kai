@@ -4,19 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sagnikc395/kai/internal/api"
+	groq "github.com/conneroisu/groq-go"
+	groqtools "github.com/conneroisu/groq-go/pkg/tools"
 	"github.com/sagnikc395/kai/internal/tools"
 )
 
 type ToolExecutionResult struct {
-	ToolCall      api.ToolCall
+	ToolCall      groqtools.ToolCall
 	Result        tools.Result
 	CallSummary   string
 	ResultSummary string
 }
 
-func ExecuteToolCalls(toolCalls []api.ToolCall) ([]api.ChatMessage, []ToolExecutionResult) {
-	messages := make([]api.ChatMessage, 0, len(toolCalls))
+func ExecuteToolCalls(toolCalls []groqtools.ToolCall) ([]groq.ChatCompletionMessage, []ToolExecutionResult) {
+	messages := make([]groq.ChatCompletionMessage, 0, len(toolCalls))
 	results := make([]ToolExecutionResult, 0, len(toolCalls))
 
 	for _, toolCall := range toolCalls {
@@ -49,10 +50,10 @@ func ExecuteToolCalls(toolCalls []api.ToolCall) ([]api.ChatMessage, []ToolExecut
 			}
 		}
 
-		messages = append(messages, api.ChatMessage{
-			Role:       "tool",
+		messages = append(messages, groq.ChatCompletionMessage{
+			Role:       groq.RoleTool,
 			ToolCallID: toolCall.ID,
-			Content:    api.StringPtr(result.Output),
+			Content:    result.Output,
 		})
 		results = append(results, ToolExecutionResult{
 			ToolCall:      toolCall,
