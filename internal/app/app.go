@@ -1,65 +1,62 @@
-package main
+package app
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"io"
 	"os"
 
 	groq "github.com/conneroisu/groq-go"
 	"github.com/joho/godotenv"
-	"github.com/sagnikc395/kai/internal/ui"
+	"github.com/sagnikc395/kai/internal/tui"
 )
 
-const version = "2.0.0"
+const Version = "2.0.0"
 
 var defaultModel = groq.ModelLlama3370BVersatile
 
-func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+func Run(ctx context.Context, args []string, input io.Reader, output io.Writer, errOutput io.Writer) error {
+	_ = godotenv.Load()
 
 	modelStr := string(defaultModel)
 	showVersion := false
 
-	flags := flag.NewFlagSet("kai", flag.ExitOnError)
+	flags := flag.NewFlagSet("kai", flag.ContinueOnError)
+	flags.SetOutput(errOutput)
 	flags.StringVar(&modelStr, "m", modelStr, "model to use via Groq")
 	flags.StringVar(&modelStr, "model", modelStr, "model to use via Groq")
 	flags.BoolVar(&showVersion, "V", false, "print version")
 	flags.BoolVar(&showVersion, "version", false, "print version")
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: kai [options]\n\n")
-		fmt.Fprintf(flags.Output(), "A simple coding assistant in your terminal.\n\n")
+		fmt.Fprintf(flags.Output(), "A Bubble Tea-powered coding assistant in your terminal.\n\n")
 		fmt.Fprintf(flags.Output(), "Options:\n")
 		flags.PrintDefaults()
 	}
 
-	if err := flags.Parse(os.Args[1:]); err != nil {
-		os.Exit(2)
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
 	}
 
 	if showVersion {
-		fmt.Println(version)
-		return
+		fmt.Fprintln(output, Version)
+		return nil
 	}
 
 	apiKey := os.Getenv("GROQ_API_KEY")
 	if apiKey == "" {
-		fmt.Fprintln(os.Stderr, "ERROR: GROQ_API_KEY environment variable is required.")
-		os.Exit(1)
+		return fmt.Errorf("GROQ_API_KEY environment variable is required")
 	}
 
 	client, err := groq.NewClient(apiKey)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
-	if err := ui.RunREPL(context.Background(), client, groq.ChatModel(modelStr), os.Stdin, os.Stdout); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
+	return tui.Run(ctx, client, groq.ChatModel(modelStr), input, output)
 }

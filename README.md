@@ -4,8 +4,8 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
 
 ## Features
 
-- Interactive terminal REPL
-- Talks to any model available through [OpenRouter](https://openrouter.ai) (defaults to `anthropic/claude-sonnet-4`)
+- Bubble Tea v2 terminal UI with streaming responses, tool status, and transcript scrolling
+- Talks to models available through Groq (defaults to `llama-3.3-70b-versatile`)
 - Tool-use agent loop with a small but practical tool set:
   - `bash` - run shell commands
   - `read` - read files
@@ -18,12 +18,12 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
 ## Requirements
 
 - Go 1.26.3 or newer
-- An OpenRouter API key
+- A Groq API key
 
 ## Setup
 
 ```bash
-export OPENROUTER_API_KEY=your_key_here
+export GROQ_API_KEY=your_key_here
 ```
 
 ## Usage
@@ -31,21 +31,21 @@ export OPENROUTER_API_KEY=your_key_here
 Run from source:
 
 ```bash
-go run .
+go run ./cmd/kai
 # or pick a different model
-go run . --model anthropic/claude-opus-4
+go run ./cmd/kai --model llama-3.1-8b-instant
 ```
 
 CLI options:
 
-- `-m, --model <model>` - OpenRouter model id (default: `anthropic/claude-sonnet-4`)
+- `-m, --model <model>` - Groq model id (default: `llama-3.3-70b-versatile`)
 - `-V, --version` - print version
 - `-h, --help` - show help
 
 ## Building a binary
 
 ```bash
-go build -o dist/kai .
+go build -o dist/kai ./cmd/kai
 ```
 
 The compiled binary is self-contained. Drop it on your `PATH` and run `kai`.
@@ -53,12 +53,13 @@ The compiled binary is self-contained. Drop it on your `PATH` and run `kai`.
 ## Project layout
 
 ```
-main.go             # CLI entry
+cmd/kai/            # binary entrypoint
 internal/
-  api/              # OpenRouter client + types
+  app/              # CLI flag parsing and app startup
+  api/              # API client + types
   core/             # message loop, query, system prompt, tool executor
+  tui/              # Bubble Tea v2 terminal UI
   tools/            # bash, read, write, edit, glob, grep
-  ui/               # terminal REPL
 ```
 
 The agent loop lives in `internal/core/message_loop.go` and dispatches tool calls through `internal/core/tool_executor.go`. Tools expose JSON schemas from `internal/tools/registry.go`.
