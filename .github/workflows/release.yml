@@ -9,64 +9,38 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build and Release
+  build:
+    name: Build wheel
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            suffix: linux-amd64
-          - goos: linux
-            goarch: arm64
-            suffix: linux-arm64
-          - goos: darwin
-            goarch: amd64
-            suffix: darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            suffix: darwin-arm64
-          - goos: windows
-            goarch: amd64
-            suffix: windows-amd64
-            ext: .exe
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          go-version-file: go.mod
-          cache: true
+          python-version: "3.12"
+          cache: pip
 
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
+      - name: Install dependencies
         run: |
-          VERSION=${GITHUB_REF_NAME}
-          OUTPUT="kai-${{ matrix.suffix }}${{ matrix.ext }}"
-          go build \
-            -trimpath \
-            -ldflags="-s -w -X main.version=${VERSION}" \
-            -o "${OUTPUT}" \
-            .
+          pip install build
+
+      - name: Build wheel
+        run: |
+          python -m build --outdir dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kai-${{ matrix.suffix }}
-          path: kai-${{ matrix.suffix }}${{ matrix.ext }}
+          name: kai-wheel
+          path: dist/kai-*.whl
           retention-days: 1
 
   publish:
     name: Publish Release
-    needs: release
+    needs: build
     runs-on: ubuntu-latest
 
     steps:

@@ -4,7 +4,7 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
 
 ## Features
 
-- Bubble Tea v2 terminal UI with streaming responses, tool status, and transcript scrolling
+- Textual terminal UI with streaming responses, tool status, and transcript scrolling
 - Talks to models available through Groq (defaults to `llama-3.3-70b-versatile`)
 - Tool-use agent loop with a small but practical tool set:
   - `bash` - run shell commands
@@ -13,11 +13,11 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
   - `edit` - string-replace edits
   - `glob` - find files by pattern
   - `grep` - search file contents
-- Single-binary builds for Linux, macOS, and Windows via `go build`
+- Python package installable via pip
 
 ## Requirements
 
-- Go 1.26.3 or newer
+- Python 3.10 or newer
 - A Groq API key
 - Optional: [Task](https://taskfile.dev/) for the `Taskfile.yml` workflows
 
@@ -32,9 +32,9 @@ export GROQ_API_KEY=your_key_here
 Run from source:
 
 ```bash
-go run ./cmd/kai
+python -m kai
 # or pick a different model
-go run ./cmd/kai --model llama-3.1-8b-instant
+python -m kai --model llama-3.1-8b-instant
 ```
 
 Or with Task:
@@ -52,56 +52,68 @@ CLI options:
 
 ## Development Tasks
 
-The Taskfile uses a repo-local Go build cache at `.cache/go-build`, which keeps checks working in sandboxed or locked-down environments.
-
 ```bash
 task          # run the default check task
 task run      # run the TUI from source
-task build    # build dist/kai for the current platform
-task test     # run go test ./...
-task vet      # run go vet ./...
-task fmt      # gofmt cmd/ and internal/
-task tidy     # go mod tidy
-task release  # build release binaries for Linux, macOS, and Windows
-task clean    # remove dist/ and local build cache
+task install  # pip install -e .
+task test     # run pytest
+task lint     # ruff check
+task fmt      # ruff format
+task release  # build wheel
+task clean    # remove build artifacts
 ```
 
 ## Building
 
 ```bash
-go build -o dist/kai ./cmd/kai
+pip install build
+python -m build --outdir dist
+pip install dist/kai-*.whl
 ```
 
-The compiled binary is self-contained. Drop it on your `PATH` and run `kai`.
+The installed package adds the `kai` command to your PATH.
 
 ## Architecture
 
-Kai is organized as a small layered Go application:
+Kai is organized as a small layered Python application:
 
 ```text
-cmd/kai/            # binary entrypoint
-internal/
-  app/              # CLI flag parsing, .env loading, Groq client creation
-  api/              # API client wrapper package
-  core/             # conversation state, message loop, system prompt, tool executor
-  tui/              # Bubble Tea v2 terminal UI and streaming event bridge
-  tools/            # bash, read, write, edit, glob, grep tool implementations
+kai/                  # Python package
+  __main__.py         # python -m kai entry point
+  app.py              # CLI flag parsing, .env loading, Groq client creation, TUI launch
+  api/
+    client.py         # Groq API client wrapper
+  core/
+    conversation.py   # Conversation state management
+    message_loop.py   # Agent loop with streaming and tool-call accumulation
+    system_prompt.py  # Dynamic system prompt builder
+    tool_executor.py  # Tool dispatch and result collection
+  tools/
+    base.py           # Tool ABC, Result type, argument helpers, JSON schema builders
+    registry.py       # Tool registration, lookup, Definitions() for Groq API
+    colors.py         # Rich markup color helpers (with NO_COLOR support)
+    format.py         # truncateLines helper
+    bash.py           # bash tool: runs shell commands
+    read.py           # read tool: reads files with line numbers
+    write.py          # write tool: creates/overwrites files
+    edit.py           # edit tool: string-replace in files
+    glob_.py          # glob tool: finds files by pattern (supports **)
+    grep_.py          # grep tool: regex search in file contents
+  tui/
+    tui.py            # Textual TUI: streaming, transcript, keyboard handling
 ```
 
 Runtime flow:
 
-1. `cmd/kai/main.go` calls `app.Run` with process IO and CLI args.
-2. `internal/app` loads `.env`, parses flags, validates `GROQ_API_KEY`, creates the Groq client, and starts the TUI.
-3. `internal/tui` owns the Bubble Tea event loop, transcript rendering, keyboard handling, and status updates.
-4. User messages are appended to `core.Conversation`, then `core.RunMessageLoop` sends a streamed Groq chat completion request.
-5. The model receives the generated system prompt plus the tool definitions from `tools.Definitions()`.
-6. Streaming deltas are forwarded to the TUI as tokens. Tool-call deltas are accumulated until the model requests tool execution.
-7. `core.ExecuteToolCalls` resolves each requested tool by name, unmarshals JSON arguments, executes the local tool, and appends Groq `tool` messages back into the conversation.
-8. The loop continues until the model returns a normal assistant response with no pending tool calls.
+1. `kai/app.py` loads `.env`, parses flags, validates `GROQ_API_KEY`, creates the Groq client, and starts the TUI.
+2. `kai/tui/tui.py` owns the Textual event loop, transcript rendering, keyboard handling, and status updates.
+3. User messages are appended to `core.Conversation`, then `core.run_message_loop` sends a streamed Groq chat completion request.
+4. The model receives the generated system prompt plus the tool definitions from `tools.definitions()`.
+5. Streaming deltas are forwarded to the TUI as tokens. Tool-call deltas are accumulated until the model requests tool execution.
+6. `core.execute_tool_calls` resolves each requested tool by name, unmarshals JSON arguments, executes the local tool, and appends Groq `tool` messages back into the conversation.
+7. The loop continues until the model returns a normal assistant response with no pending tool calls.
 
 ## API Surface
-
-Kai currently exposes a CLI API and an internal tool API.
 
 ### CLI API
 
@@ -119,30 +131,29 @@ Environment:
 
 - `GROQ_API_KEY` is required.
 - `.env` is loaded automatically when present.
-- `NO_COLOR=1` disables ANSI color in tool result rendering.
+- `NO_COLOR=1` disables Rich markup in tool result rendering.
 
 ### Model API
 
-The model integration uses `github.com/conneroisu/groq-go`:
+The model integration uses the `groq` Python SDK:
 
-- `ChatCompletionStream` is used for streamed assistant output.
+- `client.chat.completions.create(stream=True)` is used for streamed assistant output.
 - Requests include a system message, accumulated conversation history, and function tool definitions.
 - Tool calls are returned as streamed deltas and reconstructed by index before execution.
-- Tool results are sent back as Groq `tool` role messages using the original `ToolCallID`.
+- Tool results are sent back as Groq `tool` role messages using the original `tool_call_id`.
 
 ### Tool API
 
-Tools implement `internal/tools.Tool`:
+Tools implement `tools.base.Tool`:
 
-```go
-type Tool interface {
-    Name() string
-    Description() string
-    Parameters() map[string]any
-    Call(input map[string]any) Result
-    RenderToolCall(input map[string]any) string
-    RenderResult(result Result) string
-}
+```python
+class Tool(ABC):
+    def name(self) -> str: ...
+    def description(self) -> str: ...
+    def parameters(self) -> dict: ...
+    def call(self, input: dict) -> Result: ...
+    def render_tool_call(self, input: dict) -> str: ...
+    def render_result(self, result: Result) -> str: ...
 ```
 
 Available tools:
@@ -156,7 +167,7 @@ Available tools:
 | `glob` | `pattern` | `path` | Find files by glob pattern, including `**`. |
 | `grep` | `pattern` | `path`, `include` | Search file contents with a regex. |
 
-`tools.Definitions()` converts each tool's JSON-schema-like `Parameters()` map into Groq function definitions. New tools should be registered in `internal/tools/registry.go` and added to `All()` to control the order presented to the model.
+`tools.registry.definitions()` converts each tool's JSON-schema-like `parameters()` dict into Groq function definitions. New tools should be registered in `tools/registry.py` and added to `all()` to control the order presented to the model.
 
 ## License
 
