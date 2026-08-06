@@ -1,5 +1,7 @@
 # kai
 
+![kai](./docs/assets/Screenshot%202026-08-06%20at%206.56.45 PM.png)
+
 A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent - a tiny Claude Code-style tool - that runs an LLM in a tool-use loop against your local filesystem and shell.
 
 ## Features
