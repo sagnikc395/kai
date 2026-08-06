@@ -19,7 +19,6 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
 
 - Python 3.10 or newer
 - A Groq API key
-- Optional: [Task](https://taskfile.dev/) for the `Taskfile.yml` workflows
 
 ## Quick Start
 
@@ -49,30 +48,26 @@ python main.py --model llama-3.1-8b-instant
 
 If you installed the package, `kai` and `python -m kai` do the same thing.
 
-Or with Task:
-
-```bash
-task run
-task run -- --model llama-3.1-8b-instant
-```
-
 CLI options:
 
 - `-m, --model <model>` - Groq model id (default: `llama-3.3-70b-versatile`)
 - `-V, --version` - print version
 - `-h, --help` - show help
 
-## Development Tasks
+Inside the TUI:
+
+- Type a message and press <kbd>Enter</kbd> to send.
+- `exit`, `quit`, `/exit`, or `/quit` leaves the session.
+- <kbd>Esc</kbd> or <kbd>Ctrl</kbd>+<kbd>C</kbd> quits.
+
+## Development
 
 ```bash
-task          # run the default check task
-task run      # run the TUI from source
-task install  # pip install -e .
-task test     # run pytest
-task lint     # ruff check
-task fmt      # ruff format
-task release  # build wheel
-task clean    # remove build artifacts
+uv sync                  # install dependencies
+pip install -e .         # editable install (adds the `kai` command)
+python -m pytest         # run the test suite
+ruff check               # lint
+ruff format              # format
 ```
 
 ## Building
@@ -93,6 +88,7 @@ Kai is organized as a small layered Python application:
 main.py               # run-from-checkout entry point (python main.py)
 kai/                  # Python package
   __main__.py         # python -m kai entry point
+  __version__.py      # package version string (-V / --version)
   app.py              # CLI flag parsing, .env loading, Groq client creation, TUI launch
   api/
     client.py         # Groq API client wrapper
@@ -114,6 +110,8 @@ kai/                  # Python package
     grep_.py          # grep tool: regex search in file contents
   tui/
     tui.py            # Textual TUI: streaming, transcript, keyboard handling
+tests/                # pytest suite for the tools
+docs/                 # design notes (V3.md)
 ```
 
 Runtime flow:

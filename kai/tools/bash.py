@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import platform
 import subprocess
-import sys
 from typing import Any
 
 from kai.tools.base import (
