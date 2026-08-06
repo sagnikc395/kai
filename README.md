@@ -13,7 +13,7 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
   - `edit` - string-replace edits
   - `glob` - find files by pattern
   - `grep` - search file contents
-- Python package installable via pip
+- Python package installable via pip, or runnable straight from a checkout with `python main.py`
 
 ## Requirements
 
@@ -21,21 +21,33 @@ A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent
 - A Groq API key
 - Optional: [Task](https://taskfile.dev/) for the `Taskfile.yml` workflows
 
-## Setup
+## Quick Start
 
 ```bash
-export GROQ_API_KEY=your_key_here
+git clone https://github.com/sagnikc395/kai
+cd kai
+
+uv sync                 # or: pip install groq python-dotenv textual
+
+echo "GROQ_API_KEY=your_key_here" > .env
+python main.py
 ```
+
+`main.py` lives at the repo root and needs no install step - it puts the repo on
+`sys.path` and hands off to `kai.app.main`. The key can also come from the
+environment instead of `.env` (`export GROQ_API_KEY=...`).
 
 ## Usage
 
-Run from source:
+Run from source - no installation required:
 
 ```bash
-python -m kai
+python main.py
 # or pick a different model
-python -m kai --model llama-3.1-8b-instant
+python main.py --model llama-3.1-8b-instant
 ```
+
+If you installed the package, `kai` and `python -m kai` do the same thing.
 
 Or with Task:
 
@@ -78,6 +90,7 @@ The installed package adds the `kai` command to your PATH.
 Kai is organized as a small layered Python application:
 
 ```text
+main.py               # run-from-checkout entry point (python main.py)
 kai/                  # Python package
   __main__.py         # python -m kai entry point
   app.py              # CLI flag parsing, .env loading, Groq client creation, TUI launch

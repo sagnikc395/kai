@@ -13,7 +13,7 @@ tasks:
   run:
     desc: Run kai from source; pass flags after --
     cmds:
-      - python -m kai {{.CLI_ARGS}}
+      - python main.py {{.CLI_ARGS}}
 
   build:
     desc: Build the kai package
