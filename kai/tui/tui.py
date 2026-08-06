@@ -53,11 +53,12 @@ class KaiApp(App[None]):
         self.conversation = Conversation(client, model_name)
         self.busy = False
         self.current_assistant: Static | None = None
+        self.current_assistant_text = ""
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         yield VerticalScroll(id="transcript")
-        yield Static(id="status-bar", renderable="Ready")
+        yield Static("Ready", id="status-bar")
         yield Input(id="input", placeholder="Type a message...")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -87,6 +88,9 @@ class KaiApp(App[None]):
             on_tool_result=lambda r: self.call_from_thread(self._on_tool_result, r),
             on_complete=lambda t: self.call_from_thread(self._on_complete, t),
             on_error=lambda e: self.call_from_thread(self._on_error, e),
+            on_retry=lambda e, n, total: self.call_from_thread(
+                self._on_retry, e, n, total
+            ),
         )
         self.conversation.send(message, callbacks)
 
@@ -95,10 +99,11 @@ class KaiApp(App[None]):
         if self.current_assistant is None:
             transcript = self.query_one("#transcript")
             self.current_assistant = Static("", markup=True)
+            self.current_assistant_text = ""
             transcript.mount(self.current_assistant)
             transcript.scroll_end(animate=False)
-        current = self.current_assistant.renderable or ""
-        self.current_assistant.update(current + token)
+        self.current_assistant_text += token
+        self.current_assistant.update(self.current_assistant_text)
 
     def _on_tool_start(self, tool_calls: list[dict[str, Any]]) -> None:
         self.current_assistant = None
@@ -114,6 +119,15 @@ class KaiApp(App[None]):
         self.busy = False
         self.current_assistant = None
         self._update_status("Ready")
+
+    def _on_retry(self, err: Exception, attempt: int, total: int) -> None:
+        # The failed attempt's partial output is discarded upstream, so drop the
+        # widget holding it instead of letting the retry append to it.
+        if self.current_assistant is not None:
+            self.current_assistant.remove()
+            self.current_assistant = None
+            self.current_assistant_text = ""
+        self._update_status(f"Retrying ({attempt}/{total - 1})")
 
     def _on_error(self, err: Exception) -> None:
         self.busy = False

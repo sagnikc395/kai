@@ -1,14 +1,34 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from groq import Groq
+from groq import (
+    APIConnectionError,
+    APITimeoutError,
+    Groq,
+    RateLimitError,
+)
 
 from kai.core.system_prompt import build_system_prompt
 from kai.core.tool_executor import ToolExecutionResult, execute_tool_calls
 from kai.tools.registry import definitions
+
+
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 0.5
+
+# Groq rejects a generation when the model emits a malformed tool call (a name
+# that isn't in request.tools, or unparseable call syntax). Smaller models do
+# this intermittently, so the same request usually succeeds on a retry.
+_RETRYABLE_MESSAGES = (
+    "failed to call a function",
+    "failed_generation",
+    "tool call validation failed",
+    "tool_use_failed",
+)
 
 
 @dataclass
@@ -18,6 +38,19 @@ class MessageLoopCallbacks:
     on_tool_result: Callable[[list[ToolExecutionResult]], None] | None = None
     on_complete: Callable[[str], None] | None = None
     on_error: Callable[[Exception], None] | None = None
+    # (error, attempt_number, max_attempts) — partial output from the failed
+    # attempt is discarded, so the UI should drop anything already streamed.
+    on_retry: Callable[[Exception, int, int], None] | None = None
+
+
+def _is_retryable(err: Exception) -> bool:
+    if isinstance(err, (APIConnectionError, APITimeoutError, RateLimitError)):
+        return True
+    status = getattr(err, "status_code", None)
+    if isinstance(status, int) and status >= 500:
+        return True
+    text = str(err).lower()
+    return any(marker in text for marker in _RETRYABLE_MESSAGES)
 
 
 @dataclass
@@ -65,6 +98,45 @@ def _build_tool_calls(
     return tool_calls
 
 
+def _stream_completion(
+    client: Groq,
+    request_messages: list[dict[str, Any]],
+    model: str,
+    tool_defs: list[dict[str, Any]],
+    callbacks: MessageLoopCallbacks,
+) -> tuple[str, dict[int, _ToolCallAccumulator], str | None]:
+    assistant_text = ""
+    accumulated: dict[int, _ToolCallAccumulator] = {}
+    finish_reason: str | None = None
+
+    stream = client.chat.completions.create(
+        model=model,
+        messages=request_messages,
+        tools=tool_defs,
+        stream=True,
+    )
+
+    for chunk in stream:
+        if chunk.choices is None or len(chunk.choices) == 0:
+            continue
+        choice = chunk.choices[0]
+        delta = choice.delta
+
+        if delta and delta.content:
+            assistant_text += delta.content
+            if callbacks.on_token:
+                callbacks.on_token(delta.content)
+
+        if delta and delta.tool_calls:
+            for tool_call_delta in delta.tool_calls:
+                _accumulate_tool_call_delta(accumulated, tool_call_delta)
+
+        if choice.finish_reason:
+            finish_reason = choice.finish_reason
+
+    return assistant_text, accumulated, finish_reason
+
+
 def run_message_loop(
     client: Groq,
     messages: list[dict[str, Any]],
@@ -79,46 +151,34 @@ def run_message_loop(
     continue_loop = True
 
     while continue_loop:
-        assistant_text = ""
-        accumulated: dict[int, _ToolCallAccumulator] = {}
-        finish_reason: str | None = None
-
         request_messages = [system_message] + messages
 
-        try:
-            stream = client.chat.completions.create(
-                model=model,
-                messages=request_messages,
-                tools=tool_defs,
-                stream=True,
-                stream_options={"include_usage": False},
-            )
-        except Exception as err:
+        assistant_text = ""
+        accumulated: dict[int, _ToolCallAccumulator] = {}
+        finish_reason = None
+        last_error: Exception | None = None
+
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            assistant_text = ""
+            accumulated = {}
+            finish_reason = None
+            try:
+                assistant_text, accumulated, finish_reason = _stream_completion(
+                    client, request_messages, model, tool_defs, callbacks
+                )
+                last_error = None
+                break
+            except Exception as err:
+                last_error = err
+                if attempt == MAX_ATTEMPTS or not _is_retryable(err):
+                    break
+                if callbacks.on_retry:
+                    callbacks.on_retry(err, attempt, MAX_ATTEMPTS)
+                time.sleep(RETRY_BASE_DELAY * (2 ** (attempt - 1)))
+
+        if last_error is not None:
             if callbacks.on_error:
-                callbacks.on_error(err)
-            return messages
-
-        try:
-            for chunk in stream:
-                if chunk.choices is None or len(chunk.choices) == 0:
-                    continue
-                choice = chunk.choices[0]
-                delta = choice.delta
-
-                if delta and delta.content:
-                    assistant_text += delta.content
-                    if callbacks.on_token:
-                        callbacks.on_token(delta.content)
-
-                if delta and delta.tool_calls:
-                    for tool_call_delta in delta.tool_calls:
-                        _accumulate_tool_call_delta(accumulated, tool_call_delta)
-
-                if choice.finish_reason:
-                    finish_reason = choice.finish_reason
-        except Exception as err:
-            if callbacks.on_error:
-                callbacks.on_error(err)
+                callbacks.on_error(last_error)
             return messages
 
         tool_calls = _build_tool_calls(accumulated)
