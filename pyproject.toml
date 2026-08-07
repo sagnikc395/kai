@@ -11,7 +11,7 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "groq>=0.12,<1",
+    "ollama>=0.4,<1",
     "python-dotenv>=1.0,<2",
     "textual>=1.0,<2",
 ]

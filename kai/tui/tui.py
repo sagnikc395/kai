@@ -3,13 +3,13 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-from groq import Groq
 from rich.markup import escape
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.events import Key
 from textual.widgets import Header, Input, Static
 
+from kai.api.base import Backend
 from kai.core.conversation import Conversation
 from kai.core.message_loop import MessageLoopCallbacks
 from kai.core.tool_executor import ToolExecutionResult
@@ -46,11 +46,11 @@ class KaiApp(App[None]):
         ("ctrl+c", "quit", ""),
     ]
 
-    def __init__(self, client: Groq, model_name: str) -> None:
+    def __init__(self, backend: Backend) -> None:
         super().__init__()
-        self.client = client
-        self.model_name = model_name
-        self.conversation = Conversation(client, model_name)
+        self.backend = backend
+        self.model_name = backend.model
+        self.conversation = Conversation(backend)
         self.busy = False
         self.current_assistant: Static | None = None
         self.current_assistant_text = ""
@@ -58,7 +58,9 @@ class KaiApp(App[None]):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         yield VerticalScroll(id="transcript")
-        yield Static("Ready", id="status-bar")
+        yield Static(
+            f"[dim]Ready — {self.backend.name}:{self.model_name}[/]", id="status-bar"
+        )
         yield Input(id="input", placeholder="Type a message...")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -152,7 +154,9 @@ class KaiApp(App[None]):
 
     def _update_status(self, status: str) -> None:
         try:
-            self.query_one("#status-bar").update(f"[dim]{status}[/]")
+            self.query_one("#status-bar").update(
+                f"[dim]{status} — {self.backend.name}:{self.model_name}[/]"
+            )
         except Exception:
             pass
 
@@ -174,6 +178,6 @@ def _render_tool_results(results: list[ToolExecutionResult]) -> str:
     return "\n".join(blocks)
 
 
-def run_tui(client: Groq, model_name: str) -> None:
-    app = KaiApp(client, model_name)
+def run_tui(backend: Backend) -> None:
+    app = KaiApp(backend)
     app.run()

@@ -5,20 +5,41 @@ import sys
 from dotenv import load_dotenv
 
 from kai.__version__ import VERSION
-from kai.api.client import create_client
+from kai.api.client import create_backend
+from kai.api.ollama_backend import DEFAULT_HOST, DEFAULT_MODEL
 from kai.tui.tui import run_tui
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="kai",
-        description="A Textual-powered coding assistant in your terminal.",
+        description=(
+            "A Textual-powered coding assistant in your terminal, "
+            "running locally on Ollama."
+        ),
     )
     parser.add_argument(
         "-m",
         "--model",
-        default="llama-3.3-70b-versatile",
-        help="model to use via Groq (default: llama-3.3-70b-versatile)",
+        default=os.environ.get("KAI_MODEL", DEFAULT_MODEL),
+        help=f"Ollama model to use (default: {DEFAULT_MODEL})",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("OLLAMA_HOST", DEFAULT_HOST),
+        help=f"Ollama server URL (default: {DEFAULT_HOST})",
+    )
+    parser.add_argument(
+        "--num-ctx",
+        type=int,
+        default=None,
+        help="context window in tokens",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="sampling temperature",
     )
     parser.add_argument(
         "-V",
@@ -39,10 +60,20 @@ def main() -> None:
         print(VERSION)
         return
 
-    api_key = os.environ.get("GROQ_API_KEY")
-    if not api_key:
-        print("ERROR: GROQ_API_KEY environment variable is required", file=sys.stderr)
+    options: dict[str, object] = {}
+    if args.num_ctx is not None:
+        options["num_ctx"] = args.num_ctx
+    if args.temperature is not None:
+        options["temperature"] = args.temperature
+
+    try:
+        backend = create_backend(
+            model=args.model,
+            host=args.host,
+            options=options,
+        )
+    except Exception as err:
+        print(f"ERROR: {err}", file=sys.stderr)
         sys.exit(1)
 
-    client = create_client(api_key)
-    run_tui(client, args.model)
+    run_tui(backend)
