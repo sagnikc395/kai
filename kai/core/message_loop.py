@@ -8,9 +8,7 @@ from kai.api.base import Backend
 from kai.core.system_prompt import build_system_prompt
 from kai.core.tool_executor import ToolExecutionResult, execute_tool_calls
 from kai.tools.registry import definitions
-
-MAX_ATTEMPTS = 4
-RETRY_BASE_DELAY = 0.5
+from kai.config import MessageConfig
 
 
 @dataclass
@@ -68,7 +66,7 @@ def run_message_loop(
         finish_reason = None
         last_error: Exception | None = None
 
-        for attempt in range(1, MAX_ATTEMPTS + 1):
+        for attempt in range(1, MessageConfig.MAX_ATTEMPTS + 1):
             assistant_text = ""
             tool_calls = []
             finish_reason = None
@@ -80,11 +78,11 @@ def run_message_loop(
                 break
             except Exception as err:
                 last_error = err
-                if attempt == MAX_ATTEMPTS or not backend.is_retryable(err):
+                if attempt == MessageConfig.MAX_ATTEMPTS or not backend.is_retryable(err):
                     break
                 if callbacks.on_retry:
-                    callbacks.on_retry(err, attempt, MAX_ATTEMPTS)
-                time.sleep(RETRY_BASE_DELAY * (2 ** (attempt - 1)))
+                    callbacks.on_retry(err, attempt, MessageConfig.MAX_ATTEMPTS)
+                time.sleep(MessageConfig.RETRY_BASE_DELAY * (2 ** (attempt - 1)))
 
         if last_error is not None:
             if callbacks.on_error:

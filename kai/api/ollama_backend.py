@@ -10,6 +10,8 @@ from kai.config import OllamaConfig
 
 class OllamaUnavailableError(RuntimeError):
     """Raised when the local Ollama server can't be reached or lacks the model."""
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
     
 
 
@@ -103,6 +105,7 @@ class OllamaBackend:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
     ) -> Iterator[StreamEvent]:
+        
         tool_calls: list[dict[str, Any]] = []
         finish_reason: str | None = None
 
@@ -154,6 +157,7 @@ class OllamaBackend:
         status = getattr(err, "status_code", None)
         text = str(err).lower()
 
+        # model doest exist 
         if status == 404 or "not found" in text:
             return OllamaUnavailableError(
                 f"Model '{self.model}' is not available in Ollama. "
@@ -171,6 +175,10 @@ class OllamaBackend:
         if isinstance(err, OllamaUnavailableError):
             return False
         status = getattr(err, "status_code", None)
+        # server side failure 
+                
         if isinstance(status, int) and status >= 500:
             return True
+        
+        # network / time related failures may be transient 
         return "timeout" in str(err).lower()
