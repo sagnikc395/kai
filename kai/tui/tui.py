@@ -16,6 +16,8 @@ from kai.core.tool_executor import ToolExecutionResult
 
 
 class KaiApp(App[None]):
+    TITLE = "kai (海)"
+    SUB_TITLE = "a coding assistant in your terminal"
     CSS = """
     Screen {
         layout: vertical;
@@ -60,6 +62,11 @@ class KaiApp(App[None]):
         yield VerticalScroll(id="transcript")
         yield Static(
             f"[dim]Ready — {self.backend.name}:{self.model_name}[/]", id="status-bar"
+        )
+        yield Static(
+            "[bold cyan]kai (海)[/] — coding assistant ready\n"
+            "[dim]Model: qwen2.5-coder:7b · type a message and press Enter[/]",
+            id="welcome",
         )
         yield Input(id="input", placeholder="Type a message...")
 
@@ -141,7 +148,7 @@ class KaiApp(App[None]):
         transcript = self.query_one("#transcript")
         prefix_map = {
             "user": "[bold blue]you[/]",
-            "assistant": "[bold magenta]kai[/]",
+            "assistant": "[bold magenta]kai (海)[/]",
             "tool": "[bold orange3]tool[/]",
             "error": "[bold red]error[/]",
         }

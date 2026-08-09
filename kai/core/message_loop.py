@@ -78,7 +78,9 @@ def run_message_loop(
                 break
             except Exception as err:
                 last_error = err
-                if attempt == MessageConfig.MAX_ATTEMPTS or not backend.is_retryable(err):
+                if attempt == MessageConfig.MAX_ATTEMPTS or not backend.is_retryable(
+                    err
+                ):
                     break
                 if callbacks.on_retry:
                     callbacks.on_retry(err, attempt, MessageConfig.MAX_ATTEMPTS)
