@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-kai = "kai.app:main"
+kai = "kai.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["kai"]

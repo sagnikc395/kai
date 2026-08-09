@@ -1,6 +1,6 @@
 # kai (海)
 
-![kai](./docs/assets/Screenshot%202026-08-06%20at%206.56.45 PM.png)
+![kai](./docs/assets/v1.png)
 
 A simple coding assistant in your terminal. Kai is a minimal, hackable CLI agent - a tiny Claude Code-style tool - that runs an LLM in a tool-use loop against your local filesystem and shell. Inference is fully local: everything runs through an Ollama server on your machine, with no API key and nothing leaving the box.
 
