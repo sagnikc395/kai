@@ -1,4 +1,4 @@
-# kai
+# kai (海)
 
 ![kai](./docs/assets/Screenshot%202026-08-06%20at%206.56.45 PM.png)
 
@@ -215,4 +215,4 @@ Available tools:
 
 ## License
 
-See [LICENSE](./LICENSE).
+[MIT](./LICENSE).

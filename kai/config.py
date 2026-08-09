@@ -1,0 +1,10 @@
+## global level config that manages everything 
+
+from dataclasses import dataclass
+from pydantic import HttpUrl
+
+@dataclass(frozen=True)
+class OllamaConfig:
+    DEFAULT_HOST: HttpUrl = "http://localhost:11434"
+    DEFAULT_MODEL: str = "qwen2.5-coder:7b"
+    

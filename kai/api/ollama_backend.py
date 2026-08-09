@@ -5,13 +5,12 @@ import uuid
 from typing import Any, Iterator
 
 from kai.api.base import StreamEvent
-
-DEFAULT_HOST = "http://localhost:11434"
-DEFAULT_MODEL = "qwen2.5-coder:7b"
+from kai.config import OllamaConfig
 
 
 class OllamaUnavailableError(RuntimeError):
     """Raised when the local Ollama server can't be reached or lacks the model."""
+    
 
 
 def _tool_call_id() -> str:
@@ -82,8 +81,8 @@ class OllamaBackend:
 
     def __init__(
         self,
-        model: str = DEFAULT_MODEL,
-        host: str = DEFAULT_HOST,
+        model: str = OllamaConfig.DEFAULT_MODEL,
+        host: str = OllamaConfig.DEFAULT_HOST,
         options: dict[str, Any] | None = None,
     ) -> None:
         try:
