@@ -97,9 +97,10 @@ def _grep_files(
 
     matches: list[str] = []
     for file_path in files:
-        if include is not None:
-            if not fnmatch.fnmatch(os.path.basename(file_path), include):
-                continue
+        if include is not None and not fnmatch.fnmatch(
+            os.path.basename(file_path), include
+        ):
+            continue
         file_matches = _grep_file(expression, file_path, 100 - len(matches))
         matches.extend(file_matches)
         if len(matches) >= 100:

@@ -11,9 +11,6 @@ from kai.config import OllamaConfig
 class OllamaUnavailableError(RuntimeError):
     """Raised when the local Ollama server can't be reached or lacks the model."""
 
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-
 
 def _tool_call_id() -> str:
     return f"call_{uuid.uuid4().hex[:16]}"

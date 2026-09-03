@@ -49,20 +49,14 @@ class ReadTool(Tool):
             return Result(output=f"Error reading file: {e}", is_error=True)
 
         lines = content.split("\n")
-        start_line = 0
-        if offset > 0:
-            start_line = offset - 1
-        if start_line > len(lines):
-            start_line = len(lines)
-        end_line = len(lines)
-        if limit > 0 and start_line + limit < end_line:
-            end_line = start_line + limit
-
-        result_lines: list[str] = []
-        for i, line in enumerate(lines[start_line:end_line]):
-            result_lines.append(f"{start_line + i + 1:>6}\t{line}")
-
-        return Result(output="\n".join(result_lines))
+        start = min(offset - 1, len(lines)) if offset > 0 else 0
+        end = start + limit if limit > 0 else None
+        return Result(
+            output="\n".join(
+                f"{line_no:>6}\t{line}"
+                for line_no, line in enumerate(lines[start:end], start + 1)
+            )
+        )
 
     def render_tool_call(self, input: dict[str, Any]) -> str:
         file_path = input.get("file_path", "")

@@ -31,15 +31,6 @@ class Tool(ABC):
     def render_result(self, result: Result) -> str: ...
 
 
-def string_arg(input: dict[str, Any], name: str) -> str:
-    value = input.get(name)
-    if value is None:
-        raise ValueError(f"missing required argument {name!r}")
-    if not isinstance(value, str):
-        raise ValueError(f"argument {name!r} must be a string")
-    return value
-
-
 def optional_string_arg(input: dict[str, Any], name: str) -> tuple[str | None, bool]:
     value = input.get(name)
     if value is None:

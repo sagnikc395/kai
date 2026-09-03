@@ -41,21 +41,17 @@ class BashTool(Tool):
         timeout_ms = optional_number_arg(input, "timeout", 30000)
         timeout_sec = timeout_ms / 1000.0
 
+        shell = (
+            ["cmd", "/C"] if platform.system().lower() == "windows" else ["bash", "-lc"]
+        )
         try:
-            if platform.system().lower() == "windows":
-                proc = subprocess.run(
-                    ["cmd", "/C", command],
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout_sec,
-                )
-            else:
-                proc = subprocess.run(
-                    ["bash", "-lc", command],
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout_sec,
-                )
+            proc = subprocess.run(
+                [*shell, command],
+                capture_output=True,
+                text=True,
+                timeout=timeout_sec,
+                check=False,
+            )
 
             output = proc.stdout.strip()
             if proc.stderr.strip():
@@ -74,8 +70,7 @@ class BashTool(Tool):
         except subprocess.TimeoutExpired:
             return Result(output="Error: command timed out", is_error=True)
         except FileNotFoundError:
-            shell = "cmd" if platform.system().lower() == "windows" else "bash"
-            return Result(output=f"Error: {shell} not found in PATH", is_error=True)
+            return Result(output=f"Error: {shell[0]} not found in PATH", is_error=True)
         except Exception as e:
             return Result(output=f"Error: {e}", is_error=True)
 
